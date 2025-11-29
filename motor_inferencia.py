@@ -118,10 +118,11 @@ def obtener_prioridades_gastos(gastos: dict, hechos, tipos=('fijos', 'variables'
 
 
 # Reglas 
-#1
+#1 Si no hay ingreso entonces no se puede generar el presupuesto ni calcular tiempo de ahorro
 def hay_ingreso(datos:dict):
     return datos.get("ingresos", 0) > 0
-#2
+
+#2 Si el 50% de los ingresos se usa para cubrir los gastos de prioridad alta y media, el 30% para cubrir los gastos de prioridad baja y el 20% se destina al ahorro entonces se cumple la regla 50-30-20
 def regla_50_30_20(datos:dict, hechos, existe_alta_media:bool=True):
     ingresos = datos["ingresos"]
     gastos = datos["gastos"]
@@ -134,25 +135,29 @@ def regla_50_30_20(datos:dict, hechos, existe_alta_media:bool=True):
         return total_alta_media <= limite_alta_media and total_baja <= limite_baja
     else:
         return total_baja <= limite_baja
-#3
+    
+#3 Si los ingresos son menores que la suma de los gastos entonces requiere ajustes
 def requiere_ajustes(datos:dict):
     if not datos: return "sin datos" 
     ingresos = datos["ingresos"]
     gastos_totales = sumar_gastos(datos["gastos"])
     
     return ingresos < gastos_totales
-#4
+
+#4 El tiempo para cumplir la meta se define dividiendo la meta entre el restante mensual
 def tiempo_para_ahorrar(datos):
     ingresos = datos["ingresos"]
     meta_ahorro = datos["meta_ahorro"]
     gastos_totales = sumar_gastos(datos["gastos"])
     return math.ceil((meta_ahorro / (ingresos - gastos_totales)))
-#5
+
+#5  Si los ingresos son mayores a los gastos entonces se puede ahorrar
 def puede_ahorrar(datos:dict):
     ingresos = datos["ingresos"]
     gastos_totales = sumar_gastos(datos["gastos"])
     return ingresos > gastos_totales
-#6
+
+#6 Si no existen gastos de prioridad alta/media, el porcentaje destinado a esos gastos puede destinarse al ahorro
 def existen_gastos_alta_media(gastos_dict, hechos, tipos=['fijos','variables'], tipo_index=0, gasto_index=0):
     # Caso base
     if tipo_index >= len(tipos):
@@ -174,12 +179,14 @@ def existen_gastos_alta_media(gastos_dict, hechos, tipos=['fijos','variables'], 
         return True
 
     return existen_gastos_alta_media(gastos_dict, hechos, tipos, tipo_index, gasto_index + 1)
-#7
+
+#7 El déficit se calcula restando los gastos a los ingresos
 def calcular_deficit(datos:dict):
     ingresos = datos["ingresos"]
     gastos = sumar_gastos(datos["gastos"])
     return gastos - ingresos
-#8
+
+#8 Si el porcentaje objetivo de una categoría es menor al porcentaje destinado, es necesario recortar hasta acercarlo al porcentaje objetivo
 def cumple_porcentaje_objetivo(datos:dict, prioridades:list, hechos):
     ingresos = datos["ingresos"]
     objetivo = obtener_objetivo(prioridades, hechos)
@@ -191,7 +198,8 @@ def cumple_porcentaje_objetivo(datos:dict, prioridades:list, hechos):
         return True
     else:
         return False
-#9
+    
+#9 El monto de recorte de una categoria se calcula gasto_actual − (porcentaje_objetivo / 100) * ingreso
 def calcular_monto_recorte(datos:dict, prioridades:list, hechos):
     objetivo = obtener_objetivo(prioridades, hechos)
     ingresos = datos["ingresos"]
@@ -199,7 +207,8 @@ def calcular_monto_recorte(datos:dict, prioridades:list, hechos):
     for prioridad in prioridades:
         gasto_actual += sumar_prioridad(datos["gastos"], hechos, prioridad)
     return gasto_actual - (objetivo * ingresos)
-#10
+
+#10 Si no se define una meta de ahorro no se puede calcular el tiempo para cumplirla
 def existe_meta(datos:dict):
     return "meta_ahorro" in datos and datos["meta_ahorro"] > 0
 
@@ -248,34 +257,23 @@ def que_gastos_ajustar(datos: dict):
     return "Ajustes recomendados:\n- " + "\n- ".join(ajustes)
 
 def cosulta_meses_para_ahorrar(datos:dict):
-    if hay_ingreso(datos):
-        if existe_meta(datos):
-            if puede_ahorrar(datos):
-                return tiempo_para_ahorrar(datos)
-            else:
-                return "No puede ahorrar, se requieren ajustes en el presupuesto."
-        else:
-            return "No se definio una meta de ahorro."
-    else:
-        return "No hay ingresos registrados."
+    if not hay_ingreso(datos): return "No hay ingresos registrados."
+    elif not existe_meta(datos): return "No se definio una meta de ahorro."
+    elif not puede_ahorrar(datos): return "No puede ahorrar, se requieren ajustes en el presupuesto."  
+    else: return tiempo_para_ahorrar(datos)
     
 def consulta_gastos_requieren_ajuste(datos:dict):
-    if hay_ingreso(datos):
-        if requiere_ajustes(datos):
-            return "Los gastos requieren ajustes."
-        else:
-            return "Los gastos están dentro del presupuesto."
-    else:
-        return "No es posible evaluar sin ingresos."
+    if not hay_ingreso(datos): return "No es posible evaluar sin ingresos."
+    elif requiere_ajustes(datos): return "Los gastos superan los ingresos, se requieren ajustes."      
+    else: return "Los gastos estan dentro del presupuesto."
     
 def consulta_cumple_regla_50_30_20(datos:dict):
-    if hay_ingreso(datos):
-        ex_alta_media = existen_gastos_alta_media(datos["gastos"], hechos)
-        if regla_50_30_20(datos, hechos, ex_alta_media):
-            return "Los ingresos cumplen con la regla 50/30/20."
-        else:
-            return "Los ingresos no cumplen con la regla 50/30/20."
+    if not hay_ingreso(datos): return "No es posible evaluar sin ingresos."
+    ex_alta_media = existen_gastos_alta_media(datos["gastos"], hechos)
+    if regla_50_30_20(datos, hechos, ex_alta_media):
+        return "Los ingresos cumplen con la regla 50/30/20."
     else:
-        return "No es posible evaluar sin ingresos."
+        return "Los ingresos no cumplen con la regla 50/30/20."
+
 
 
