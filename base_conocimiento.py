@@ -13,13 +13,14 @@ hechos = (
     ('gastos', 'variables', 'libros y revistas', 'media'),        
     ('gastos', 'variables', 'cursos y talleres (hobbies)', 'media'), 
     ('gastos', 'variables', 'actividades deportivas/gimnasio', 'media'), 
-    ('gastos', 'variables', 'salidas sociales y bares', 'baja'), # R
+    ('gastos', 'variables', 'salidas sociales y bares', 'baja'), 
     ('gastos', 'variables', 'salud/medicamentos', 'alta'),
+    ('gastos', 'variables', 'interes de deudas','alta'),
     ('objetivo', .50, ('alta', 'media')),
     ('objetivo', .30, ('baja',))
 )
 
 # Reglas que aplican en la base de conocimiento
-# 11 Si un gasto es una necesidad básica o su falta genera un riesgo grave entonces tiene una prioridad alta
+#11 Si un gasto es una necesidad básica o su falta genera un riesgo grave entonces tiene una prioridad alta
 #12 Si un gasto es una gasto importante para mantener estabilidad/funcionalidad pero su falta no representa un riesgo crítico entonces tiene una prioridad media
 #13 Si un gasto es prescindible entonces se considera un gasto de prioridad baja

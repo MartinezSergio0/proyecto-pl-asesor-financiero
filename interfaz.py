@@ -1,13 +1,21 @@
+
+#importaciones
+# ---------------------------------------------
+#importaciones de PySide6
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QCheckBox, QPushButton,
     QLineEdit, QMessageBox, QGridLayout, QScrollArea, QFrame, QStackedWidget
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QLocale 
 from PySide6.QtGui import QDoubleValidator, QFont
 import math 
 
-# --- IMPORTACIONES DE TUS MÓDULOS ---
+#importación del widget de gráfica desde el archivo separado
+from grafica_gastos import GraficoGastosWidget 
+
+
+#importaciones del motor de inferencia y base de conocimiento
 from motor_inferencia import (
     cosulta_meses_para_ahorrar, 
     consulta_gastos_requieren_ajuste, 
@@ -15,25 +23,36 @@ from motor_inferencia import (
     que_gastos_ajustar
 )
 from base_conocimiento import hechos
-# ------------------------------------
+# ---------------------------------------------
 
-# --- FUNCIÓN AUXILIAR PARA GENERAR DATOS (sin cambios) ---
+# --- FUNCIÓN AUXILIAR PARA GENERAR DATOS ---
 def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
-    """Genera el diccionario de datos financieros."""
+    """
+    Genera el diccionario de datos financieros.
+    Limpia el formato de moneda ($ y separador de miles) antes de convertir a float.
+    """
+    
+    locale = QLocale(QLocale.Spanish, QLocale.Mexico)
+    
+    def limpiar_monto(text):
+        text = text.replace('$', '').strip()
+        text = text.replace(locale.groupSeparator(), '') 
+        return text
+    
+    # 1. Procesar y validar ingresos
+    ingresos_text = limpiar_monto(entrada_ingreso.text())
     try:
-        ingresos = float(entrada_ingreso.text())
-        if ingresos <= 0:
-             QMessageBox.critical(None, "Error de Validación", "El ingreso debe ser un valor positivo.")
-             return None
+        ingresos = float(ingresos_text)
     except ValueError:
         QMessageBox.critical(None, "Error de Validación", "Por favor ingrese un valor válido para los ingresos.")
         return None
-        
-    ahorro_texto = entrada_ahorro.text().strip()
+    
+    # 2. Procesar y validar ahorro
+    ahorro_text = limpiar_monto(entrada_ahorro.text())
     ahorro = None
-    if ahorro_texto:
+    if ahorro_text:
         try:
-            ahorro = float(ahorro_texto)
+            ahorro = float(ahorro_text)
         except ValueError:
             QMessageBox.critical(None, "Error de Validación", "Por favor ingrese un valor válido para la meta de ahorro (o deje el campo vacío).")
             return None
@@ -46,9 +65,11 @@ def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
         if hecho[0] == 'gastos':
             gastos_info[hecho[2]] = hecho[1] 
             
+    # 3. Procesar y validar gastos
     for nombre_gasto, entry in entrada_gastos.items():
+        gasto_text = limpiar_monto(entry.text())
         try:
-            monto = float(entry.text() if entry.text() else 0.0) 
+            monto = float(gasto_text if gasto_text else 0.0) 
         except ValueError:
             QMessageBox.critical(None, "Error de Validación", f"Por favor ingrese un valor válido para {nombre_gasto.capitalize()}.")
             return None
@@ -74,10 +95,10 @@ def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
 
 
 # ----------------------------------------------------------------------
-# VISTA 3: CONSULTAS 
+# VISTA 3: ANÁLISIS (Integra la gráfica)
 # ----------------------------------------------------------------------
 
-class VistaConsultas(QWidget):
+class VistaAnalisis(QWidget):
     def __init__(self, datos, main_window):
         super().__init__()
         self.datos = datos
@@ -103,11 +124,28 @@ class VistaConsultas(QWidget):
         titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(titulo)
         
-        self._add_button(layout, "Evaluar Gastos (Vs. Ingresos)", consulta_gastos_requieren_ajuste)
-        self._add_button(layout, "Analizar Regla 50/30/20", consulta_cumple_regla_50_30_20)
-        self._add_button(layout, "Obtener Sugerencias de Ajuste", que_gastos_ajustar)
-        self._add_button(layout, "Calcular Tiempo para Meta de Ahorro", cosulta_meses_para_ahorrar)
+        # Contenedor para botones y gráfica
+        content_layout = QHBoxLayout()
+        
+        # --- COLUMNA DE BOTONES ---
+        btn_layout = QVBoxLayout()
+        btn_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        self._add_button(btn_layout, "Evaluar Gastos (Vs. Ingresos)", consulta_gastos_requieren_ajuste)
+        self._add_button(btn_layout, "Analizar Regla 50/30/20", consulta_cumple_regla_50_30_20)
+        self._add_button(btn_layout, "Obtener Sugerencias de Ajuste", que_gastos_ajustar)
+        self._add_button(btn_layout, "Calcular Tiempo para Meta de Ahorro", cosulta_meses_para_ahorrar)
+        
+        content_layout.addLayout(btn_layout, 40) # 40% del espacio para botones
 
+        # --- COLUMNA DE GRÁFICA ---
+        # Instanciamos el widget del archivo separado
+        self.grafico = GraficoGastosWidget(self.datos) 
+        content_layout.addWidget(self.grafico, 60) # 60% del espacio para la gráfica
+        
+        layout.addLayout(content_layout)
+        
+        # Botón para volver al final
         btn_back = QPushButton("← Volver a Ingreso de Datos")
         btn_back.setObjectName("BtnBack")
         btn_back.clicked.connect(lambda: self.main_window.navigate_to(self.main_window.view_ingreso_datos_index))
@@ -128,6 +166,7 @@ class VistaConsultas(QWidget):
         msg.setWindowTitle("Resultado de la Consulta")
 
         final_text = ""
+        locale = QLocale(QLocale.Spanish, QLocale.Mexico)
         
         if isinstance(resultado, int) and boton_texto == "Calcular Tiempo para Meta de Ahorro":
             
@@ -149,14 +188,14 @@ class VistaConsultas(QWidget):
             nota_ahorro = ""
             if gastos_totales == 0 and ahorro_mensual > 0:
                 nota_ahorro = (
-                    f"\n\n***NOTA:*** El cálculo se basa en tu **Máxima Capacidad de Ahorro Teórico** "
-                    f"($\${ingresos:.2f}$) ya que no se ingresaron montos de gastos."
+                    f"\n\n¡NOTA!: El cálculo se basa en tu ¡Máxima Capacidad de Ahorro Teórico! "
+                    f"($\${locale.toString(ingresos, 'f', 2)}$) ya que no se ingresaron montos de gastos."
                 )
 
             final_text = (
-                f"🎯 Meta: **${meta:.2f}**\n"
-                f" - Ahorro Mensual Disponible: **${ahorro_mensual:.2f}**\n"
-                f" - Se necesitan **{meses_total} meses** (aprox. {años} años y {meses_restantes} meses)."
+                f"🎯 Meta: ¡${locale.toString(meta, 'f', 2)}!\n"
+                f" - Ahorro Mensual Disponible: ¡${locale.toString(ahorro_mensual, 'f', 2)}!\n"
+                f" - Se necesitan: ¡{meses_total} meses! (aprox. {años} años y {meses_restantes} meses)."
                 f"{nota_ahorro}"
             )
 
@@ -191,10 +230,11 @@ class VistaIngresoDatos(QWidget):
         self.gastos_seleccionados = []
         self.gastos_info = self._load_gastos_info()
         
-        # Widgets para el layout de gastos (inicializados aquí para setup_ui)
         self.gastos_widget = QWidget()
         self.gastos_layout = QVBoxLayout(self.gastos_widget) 
 
+        self.locale_mx = QLocale(QLocale.Spanish, QLocale.Mexico) 
+        
         self.setup_ui()
 
     def _load_gastos_info(self):
@@ -203,6 +243,22 @@ class VistaIngresoDatos(QWidget):
             if hecho[0] == 'gastos':
                 info[hecho[2]] = hecho[1] # nombre_gasto: tipo_gasto
         return info
+    
+    def format_money(self, entry: QLineEdit):
+        """Formatea el texto en el QLineEdit con el símbolo $ y separadores de miles."""
+        try:
+            text = entry.text().replace('$', '').replace(self.locale_mx.groupSeparator(), '')
+            if not text:
+                entry.setText("")
+                return
+            
+            value = float(text)
+            
+            formatted_value = self.locale_mx.toString(value, 'f', 2)
+            entry.setText(f"${formatted_value}")
+            
+        except ValueError:
+            entry.setText("")
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -234,21 +290,27 @@ class VistaIngresoDatos(QWidget):
         
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        # self.gastos_widget y self.gastos_layout ya están inicializados
         self.gastos_layout.setContentsMargins(15, 15, 15, 15)
         self.gastos_layout.setSpacing(0)
         self.scroll_area.setWidget(self.gastos_widget)
         main_layout.addWidget(self.scroll_area)
 
-        self.validator = QDoubleValidator(0.0, 9999999.0, 2)
-        self.validator.setNotation(QDoubleValidator.StandardNotation)
+        self.validator_ingreso = QDoubleValidator(0.0, 9999999.0, 2, self)
+        self.validator_ingreso.setLocale(self.locale_mx) 
+        self.validator_ingreso.setNotation(QDoubleValidator.StandardNotation)
         
-        frame_ingreso = self._create_input_frame("💰 Ingresos mensuales:", False)
+        self.validator_gastos = QDoubleValidator(0.0, 9999999.0, 2, self)
+        self.validator_gastos.setLocale(self.locale_mx)
+        self.validator_gastos.setNotation(QDoubleValidator.StandardNotation)
+        
+        frame_ingreso = self._create_input_frame("💰 Ingresos mensuales:", self.validator_ingreso, False)
         self.entry_ingreso = frame_ingreso.findChild(QLineEdit)
+        self.entry_ingreso.editingFinished.connect(lambda: self.format_money(self.entry_ingreso)) 
         main_layout.addWidget(frame_ingreso)
 
-        frame_ahorro = self._create_input_frame("📈 Meta de ahorro (opcional):", True)
+        frame_ahorro = self._create_input_frame("📈 Meta de ahorro (opcional):", self.validator_gastos, True) 
         self.entry_ahorro = frame_ahorro.findChild(QLineEdit)
+        self.entry_ahorro.editingFinished.connect(lambda: self.format_money(self.entry_ahorro)) 
         main_layout.addWidget(frame_ahorro)
         
         h_layout_buttons = QHBoxLayout()
@@ -264,7 +326,7 @@ class VistaIngresoDatos(QWidget):
         
         main_layout.addLayout(h_layout_buttons)
 
-    def _create_input_frame(self, label_text, is_optional):
+    def _create_input_frame(self, label_text, validator, is_optional):
         frame = QFrame()
         frame.setFrameShape(QFrame.StyledPanel)
         frame.setFrameShadow(QFrame.Raised)
@@ -272,7 +334,7 @@ class VistaIngresoDatos(QWidget):
         layout_frame = QHBoxLayout(frame)
         label = QLabel(label_text)
         entry = QLineEdit()
-        entry.setValidator(self.validator)
+        entry.setValidator(validator) 
         entry.setPlaceholderText("0.00" if not is_optional else "Dejar vacío si no aplica")
         entry.setObjectName(label_text.split()[1].lower()) 
         layout_frame.addWidget(label)
@@ -284,12 +346,10 @@ class VistaIngresoDatos(QWidget):
         self.gastos_seleccionados = gastos_seleccionados
         self.entrada_gastos = {}
         
-        # --- LIMPIEZA SEGURA DEL LAYOUT PRINCIPAL DE GASTOS ---
         while self.gastos_layout.count():
             item = self.gastos_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        # ----------------------------------------------------
 
         gastos_fijos_lista = []
         gastos_variables_lista = []
@@ -301,14 +361,11 @@ class VistaIngresoDatos(QWidget):
             elif tipo == 'variables':
                 gastos_variables_lista.append(gasto)
 
-        # --- RECREACIÓN DE CONTENEDORES Y LAYOUTS INTERNOS ---
-        # Se crean dentro de update_fields para garantizar que son nuevos objetos
         self.fijos_container = QWidget()
         self.fijos_layout = QGridLayout(self.fijos_container)
 
         self.variables_container = QWidget()
         self.variables_layout = QGridLayout(self.variables_container)
-        # ----------------------------------------------------
 
         if gastos_fijos_lista:
             header = QLabel("Gastos Fijos")
@@ -319,7 +376,8 @@ class VistaIngresoDatos(QWidget):
                 label = QLabel(f"{gasto.capitalize()}: ")
                 entry = QLineEdit()
                 entry.setPlaceholderText("0.00")
-                entry.setValidator(self.validator)
+                entry.setValidator(self.validator_gastos)
+                entry.editingFinished.connect(lambda entry=entry: self.format_money(entry)) 
                 self.fijos_layout.addWidget(label, row, 0)
                 self.fijos_layout.addWidget(entry, row, 1)
                 self.entrada_gastos[gasto] = entry
@@ -332,7 +390,7 @@ class VistaIngresoDatos(QWidget):
             header.setObjectName("SectionHeader")
             self.gastos_layout.addWidget(header)
             
-            tip = QLabel("TIP: Agrega lo **máximo** que estimes gastar en estos rubros.")
+            tip = QLabel(" Agrega lo ¡máximo! que estimes gastar en estos rubros.")
             tip.setObjectName("Tip")
             self.gastos_layout.addWidget(tip)
 
@@ -340,7 +398,8 @@ class VistaIngresoDatos(QWidget):
                 label = QLabel(f"{gasto.capitalize()}: ")
                 entry = QLineEdit()
                 entry.setPlaceholderText("0.00")
-                entry.setValidator(self.validator)
+                entry.setValidator(self.validator_gastos)
+                entry.editingFinished.connect(lambda entry=entry: self.format_money(entry)) 
                 self.variables_layout.addWidget(label, row, 0)
                 self.variables_layout.addWidget(entry, row, 1)
                 self.entrada_gastos[gasto] = entry
@@ -352,22 +411,22 @@ class VistaIngresoDatos(QWidget):
         """Genera el diccionario y navega a la vista de consultas."""
         datos = generar_dict(self.entrada_gastos, self.entry_ingreso, self.entry_ahorro)
         if datos:
-            vista_consultas = VistaConsultas(datos, self.main_window)
-            self.main_window.load_and_navigate(vista_consultas, self.main_window.view_consultas_index)
+            vista_analisis = VistaAnalisis(datos, self.main_window) 
+            self.main_window.load_and_navigate(vista_analisis, self.main_window.view_consultas_index)
             
 
 # ----------------------------------------------------------------------
 # VISTA 1: SELECCIÓN 
-# --------------------------hola pa--------------------------------------------
+# ----------------------------------------------------------------------
 
 class VistaSeleccion(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
         self.checkbox_vars = {}
-        self.setup_ui() # <--- SOLUCIÓN: Llama al método setup_ui aquí.
+        self.setup_ui() 
 
-    def setup_ui(self): # <--- SOLUCIÓN: Definición del método setup_ui.
+    def setup_ui(self): 
         main_layout = QVBoxLayout(self)
         
         self.setStyleSheet("""
@@ -429,7 +488,7 @@ class VistaSeleccion(QWidget):
 
 
 # ----------------------------------------------------------------------
-# VENTANA PRINCIPAL (Contenedor de Pila)
+# VENTANA PRINCIPAL (Contenedor de Pila) 
 # ----------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
