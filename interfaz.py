@@ -95,7 +95,7 @@ def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
 
 
 # ----------------------------------------------------------------------
-# VISTA 3: ANÁLISIS (Integra la gráfica)
+# VISTA 3: ANÁLISIS 
 # ----------------------------------------------------------------------
 
 class VistaAnalisis(QWidget):
