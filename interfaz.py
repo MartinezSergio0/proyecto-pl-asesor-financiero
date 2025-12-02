@@ -1,7 +1,3 @@
-
-#importaciones
-# ---------------------------------------------
-#importaciones de PySide6
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QCheckBox, QPushButton,
@@ -11,11 +7,11 @@ from PySide6.QtCore import Qt, QLocale
 from PySide6.QtGui import QDoubleValidator, QFont
 import math 
 
-#importación del widget de gráfica desde el archivo separado
+# --- Importación del Módulo de Gráficos ---
 from grafica_gastos import GraficoGastosWidget 
+# ------------------------------------------
 
-
-#importaciones del motor de inferencia y base de conocimiento
+# --- IMPORTACIONES DE TUS MÓDULOS DE NEGOCIO ---
 from motor_inferencia import (
     cosulta_meses_para_ahorrar, 
     consulta_gastos_requieren_ajuste, 
@@ -25,7 +21,7 @@ from motor_inferencia import (
 from base_conocimiento import hechos
 # ---------------------------------------------
 
-# --- FUNCIÓN AUXILIAR PARA GENERAR DATOS ---
+# --- FUNCIÓN AUXILIAR PARA GENERAR DATOS  ---
 def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
     """
     Genera el diccionario de datos financieros.
@@ -109,7 +105,7 @@ class VistaAnalisis(QWidget):
         layout = QVBoxLayout(self)
         
         self.setStyleSheet("""
-            QWidget { background-color: #e0f2f7; font-family: 'Segoe UI', Arial, sans-serif; color: #333333; }
+            QWidget { background-color: #e0f2ff; font-family: 'Segoe UI', Arial, sans-serif; color: #333333; }
             QLabel#Title { color: #00796b; font-size: 26pt; font-weight: bold; padding: 15px 0; }
             QLabel { font-size: 11pt; }
             QPushButton { background-color: #00796b; color: white; border: none; border-radius: 8px; padding: 15px; font-size: 13pt; font-weight: 600; margin-top: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
@@ -124,10 +120,8 @@ class VistaAnalisis(QWidget):
         titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(titulo)
         
-        # Contenedor para botones y gráfica
         content_layout = QHBoxLayout()
         
-        # --- COLUMNA DE BOTONES ---
         btn_layout = QVBoxLayout()
         btn_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
@@ -136,16 +130,13 @@ class VistaAnalisis(QWidget):
         self._add_button(btn_layout, "Obtener Sugerencias de Ajuste", que_gastos_ajustar)
         self._add_button(btn_layout, "Calcular Tiempo para Meta de Ahorro", cosulta_meses_para_ahorrar)
         
-        content_layout.addLayout(btn_layout, 40) # 40% del espacio para botones
+        content_layout.addLayout(btn_layout, 40) 
 
-        # --- COLUMNA DE GRÁFICA ---
-        # Instanciamos el widget del archivo separado
         self.grafico = GraficoGastosWidget(self.datos) 
-        content_layout.addWidget(self.grafico, 60) # 60% del espacio para la gráfica
+        content_layout.addWidget(self.grafico, 60) 
         
         layout.addLayout(content_layout)
         
-        # Botón para volver al final
         btn_back = QPushButton("← Volver a Ingreso de Datos")
         btn_back.setObjectName("BtnBack")
         btn_back.clicked.connect(lambda: self.main_window.navigate_to(self.main_window.view_ingreso_datos_index))
@@ -188,14 +179,14 @@ class VistaAnalisis(QWidget):
             nota_ahorro = ""
             if gastos_totales == 0 and ahorro_mensual > 0:
                 nota_ahorro = (
-                    f"\n\n¡NOTA!: El cálculo se basa en tu ¡Máxima Capacidad de Ahorro Teórico! "
+                    f"\n\n¡NOTA!: El cálculo se basa en tu **Máxima Capacidad de Ahorro Teórico** "
                     f"($\${locale.toString(ingresos, 'f', 2)}$) ya que no se ingresaron montos de gastos."
                 )
 
             final_text = (
                 f"🎯 Meta: ¡${locale.toString(meta, 'f', 2)}!\n"
                 f" - Ahorro Mensual Disponible: ¡${locale.toString(ahorro_mensual, 'f', 2)}!\n"
-                f" - Se necesitan: ¡{meses_total} meses! (aprox. {años} años y {meses_restantes} meses)."
+                f" - Se necesitan ¡{meses_total} meses! (aprox. {años} años y {meses_restantes} meses)."
                 f"{nota_ahorro}"
             )
 
@@ -390,7 +381,7 @@ class VistaIngresoDatos(QWidget):
             header.setObjectName("SectionHeader")
             self.gastos_layout.addWidget(header)
             
-            tip = QLabel(" Agrega lo ¡máximo! que estimes gastar en estos rubros.")
+            tip = QLabel("Recomendación: Agrega lo ¡máximo! que estimes gastar en estos rubros.")
             tip.setObjectName("Tip")
             self.gastos_layout.addWidget(tip)
 
@@ -425,6 +416,16 @@ class VistaSeleccion(QWidget):
         self.main_window = main_window
         self.checkbox_vars = {}
         self.setup_ui() 
+    
+    # --- MÉTODOS PARA SELECCIONAR/DESELECCIONAR ---
+    def seleccionar_todos(self):
+        for cb in self.checkbox_vars.values():
+            cb.setChecked(True)
+
+    def deseleccionar_todos(self):
+        for cb in self.checkbox_vars.values():
+            cb.setChecked(False)
+    # ----------------------------------------------
 
     def setup_ui(self): 
         main_layout = QVBoxLayout(self)
@@ -437,9 +438,22 @@ class VistaSeleccion(QWidget):
             QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #00796b; border-radius: 4px; background-color: white; }
             QCheckBox::indicator:checked { background-color: #00796b; }
             QCheckBox:hover { color: #004d40; }
-            QPushButton { background-color: #00796b; color: white; border: none; border-radius: 8px; padding: 18px; font-size: 18pt; font-weight: 600; margin-top: 25px; box-shadow: 3px 3px 8px rgba(0,0,0,0.25); }
-            QPushButton:hover { background-color: #004d40; }
-            QPushButton:pressed { background-color: #00382e; padding-top: 20px; padding-bottom: 16px; box-shadow: 1px 1px 3px rgba(0,0,0,0.15); }
+            /* Botón de Confirmación Principal */
+            QPushButton#BtnConfirm { background-color: #00796b; color: white; border: none; border-radius: 8px; padding: 18px; font-size: 18pt; font-weight: 600; margin-top: 25px; box-shadow: 3px 3px 8px rgba(0,0,0,0.25); }
+            QPushButton#BtnConfirm:hover { background-color: #004d40; }
+            QPushButton#BtnConfirm:pressed { background-color: #00382e; padding-top: 20px; padding-bottom: 16px; box-shadow: 1px 1px 3px rgba(0,0,0,0.15); }
+            /* Botones Auxiliares */
+            QPushButton#AuxButton {
+                background-color: #607d8b; /* Azul grisáceo */
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 12px;
+                font-size: 10pt;
+            }
+            QPushButton#AuxButton:hover {
+                background-color: #455a64;
+            }
         """)
         
         titulo = QLabel("Asesor Financiero Personal")
@@ -451,6 +465,23 @@ class VistaSeleccion(QWidget):
         subtitulo.setStyleSheet("font-size: 14pt; margin-top: 15px; margin-bottom: 10px; color: #333333;")
         subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(subtitulo)
+
+        # --- CONTENEDOR DE BOTONES DE CONTROL ---
+        control_layout = QHBoxLayout()
+        
+        btn_select_all = QPushButton("Seleccionar Todos")
+        btn_select_all.setObjectName("AuxButton")
+        btn_select_all.clicked.connect(self.seleccionar_todos)
+        
+        btn_deselect_all = QPushButton("Deseleccionar Todos")
+        btn_deselect_all.setObjectName("AuxButton")
+        btn_deselect_all.clicked.connect(self.deseleccionar_todos)
+        
+        control_layout.addWidget(btn_select_all)
+        control_layout.addWidget(btn_deselect_all)
+        control_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+        main_layout.addLayout(control_layout)
+        # ----------------------------------------
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -474,6 +505,7 @@ class VistaSeleccion(QWidget):
                     gastos_unicos[nombre_gasto] = True
 
         btn_confirmar = QPushButton("2. Confirmar y Pasar a Ingresar Montos")
+        btn_confirmar.setObjectName("BtnConfirm") 
         btn_confirmar.clicked.connect(self.confirmar)
         main_layout.addWidget(btn_confirmar)
 
@@ -488,7 +520,7 @@ class VistaSeleccion(QWidget):
 
 
 # ----------------------------------------------------------------------
-# VENTANA PRINCIPAL (Contenedor de Pila) 
+# VENTANA PRINCIPAL (Contenedor de Pila) (sin cambios)
 # ----------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
