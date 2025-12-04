@@ -11,7 +11,7 @@ import math
 from grafica_gastos import GraficoGastosWidget 
 # ------------------------------------------
 
-# --- IMPORTACIONES DE TUS MÓDULOS DE NEGOCIO ---
+# --- Importaciones del Módulo de Motor de Inferencia ---
 from motor_inferencia import (
     cosulta_meses_para_ahorrar, 
     consulta_gastos_requieren_ajuste, 
@@ -21,12 +21,9 @@ from motor_inferencia import (
 from base_conocimiento import hechos
 # ---------------------------------------------
 
-# --- FUNCIÓN AUXILIAR PARA GENERAR DATOS  ---
+# --- Funciones Auxiliares ---
 def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
-    """
-    Genera el diccionario de datos financieros.
-    Limpia el formato de moneda ($ y separador de miles) antes de convertir a float.
-    """
+    """Genera el diccionario de datos financieros."""
     
     locale = QLocale(QLocale.Spanish, QLocale.Mexico)
     
@@ -35,7 +32,6 @@ def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
         text = text.replace(locale.groupSeparator(), '') 
         return text
     
-    # 1. Procesar y validar ingresos
     ingresos_text = limpiar_monto(entrada_ingreso.text())
     try:
         ingresos = float(ingresos_text)
@@ -43,7 +39,6 @@ def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
         QMessageBox.critical(None, "Error de Validación", "Por favor ingrese un valor válido para los ingresos.")
         return None
     
-    # 2. Procesar y validar ahorro
     ahorro_text = limpiar_monto(entrada_ahorro.text())
     ahorro = None
     if ahorro_text:
@@ -61,7 +56,6 @@ def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
         if hecho[0] == 'gastos':
             gastos_info[hecho[2]] = hecho[1] 
             
-    # 3. Procesar y validar gastos
     for nombre_gasto, entry in entrada_gastos.items():
         gasto_text = limpiar_monto(entry.text())
         try:
@@ -91,7 +85,7 @@ def generar_dict(entrada_gastos, entrada_ingreso, entrada_ahorro):
 
 
 # ----------------------------------------------------------------------
-# VISTA 3: ANÁLISIS 
+# VISTA 3: Analisis y Consultas 
 # ----------------------------------------------------------------------
 
 class VistaAnalisis(QWidget):
@@ -104,14 +98,42 @@ class VistaAnalisis(QWidget):
     def setup_ui(self):
         layout = QVBoxLayout(self)
         
+        
         self.setStyleSheet("""
-            QWidget { background-color: #e0f2ff; font-family: 'Segoe UI', Arial, sans-serif; color: #333333; }
-            QLabel#Title { color: #00796b; font-size: 26pt; font-weight: bold; padding: 15px 0; }
-            QLabel { font-size: 11pt; }
-            QPushButton { background-color: #00796b; color: white; border: none; border-radius: 8px; padding: 15px; font-size: 13pt; font-weight: 600; margin-top: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
-            QPushButton:hover { background-color: #004d40; }
-            QPushButton:pressed { background-color: #00382e; padding-top: 17px; padding-bottom: 13px; }
-            #BtnBack { background-color: #f44336; }
+            QWidget { 
+                background-color: #f7f7f7; /* Gris claro neutro */
+                font-family: Georgia, serif; 
+                color: #333333; 
+            }
+            QLabel#Title { 
+                color: #0d47a1; /* Azul Marino (Confianza) */
+                font-family: Montserrat, "Berlin Sans", sans-serif; 
+                font-size: 26pt; 
+                font-weight: bold; 
+                padding: 15px 0; 
+            }
+            QLabel { font-size: 11pt; color: #424242; }
+            
+            /* Botones de Consulta */
+            QPushButton { 
+                background-color: #42a5f5; /* Azul brillante */
+                color: white; 
+                border: none; 
+                border-radius: 6px; 
+                padding: 12px; 
+                font-size: 12pt; 
+                font-family: Montserrat, sans-serif;
+                font-weight: 600; 
+                margin-top: 8px; 
+            }
+            QPushButton:hover { background-color: #1e88e5; }
+            QPushButton:pressed { background-color: #1565c0; }
+            
+            /* Botón de Retorno (Rojo para salir de la fase de análisis) */
+            #BtnBack { 
+                background-color: #e57373; /* Rojo suave */
+                font-family: Georgia, serif;
+            }
             #BtnBack:hover { background-color: #d32f2f; }
         """)
         
@@ -179,8 +201,8 @@ class VistaAnalisis(QWidget):
             nota_ahorro = ""
             if gastos_totales == 0 and ahorro_mensual > 0:
                 nota_ahorro = (
-                    f"\n\n¡NOTA!: El cálculo se basa en tu **Máxima Capacidad de Ahorro Teórico** "
-                    f"($\${locale.toString(ingresos, 'f', 2)}$) ya que no se ingresaron montos de gastos."
+                    f"\n\nNOTA!: El cálculo se basa en tu ¡Ingreso Mensual de ¡${locale.toString(ingresos, 'f', 2)}! "
+                    f"(¡${locale.toString(ingresos, 'f', 2)}!) ya que no se ingresaron montos de gastos."
                 )
 
             final_text = (
@@ -197,9 +219,10 @@ class VistaAnalisis(QWidget):
             final_text = "Error de datos: Resultado inesperado de la consulta."
 
         msg.setText(final_text)
-        msg.setFont(QFont("Segoe UI", 10))
+        # Usamos Georgia para el texto de la asesoría
+        msg.setFont(QFont("Georgia", 10)) 
         msg.setStyleSheet("""
-            QMessageBox { background-color: #ffffff; color: #333333; font-family: 'Segoe UI', Arial, sans-serif; }
+            QMessageBox { background-color: #ffffff; color: #333333; font-family: Georgia, serif; }
             QMessageBox QLabel { color: #333333; font-size: 10pt; }
             QMessageBox QPushButton { background-color: #00796b; color: white; border-radius: 5px; padding: 8px 15px; font-size: 10pt; }
             QMessageBox QPushButton:hover { background-color: #004d40; }
@@ -208,7 +231,7 @@ class VistaAnalisis(QWidget):
 
 
 # ----------------------------------------------------------------------
-# VISTA 2: INGRESO DE DATOS 
+# VISTA 2: Ingreso de Datos (Ajustes de Fuente y Color)
 # ----------------------------------------------------------------------
 
 class VistaIngresoDatos(QWidget):
@@ -251,22 +274,38 @@ class VistaIngresoDatos(QWidget):
         except ValueError:
             entry.setText("")
 
+    def handle_enter_key(self):
+        """Mueve el foco al siguiente widget al presionar Enter."""
+        if self.focusWidget():
+            self.format_money(self.focusWidget()) 
+        self.focusNextChild()
+
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
         
+      
         self.setStyleSheet("""
-            QWidget { background-color: #f0f4f8; font-family: 'Segoe UI', Arial, sans-serif; color: #333333; }
-            QLabel#Title { color: #2c3e50; font-size: 24pt; font-weight: bold; padding: 15px 0; }
-            QLabel { color: #34495e; font-size: 11pt; }
-            QLineEdit { border: 1px solid #bdc3c7; border-radius: 5px; padding: 8px; font-size: 11pt; background-color: #ffffff; }
-            QLineEdit:focus { border: 1px solid #3498db; }
-            QPushButton { background-color: #3498db; color: white; border: none; border-radius: 8px; padding: 15px; font-size: 16pt; font-weight: 600; margin-top: 20px; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
-            QPushButton:hover { background-color: #2980b9; }
-            QPushButton:pressed { background-color: #21618c; padding-top: 17px; padding-bottom: 13px; }
-            #BtnBack { background-color: #95a5a6; }
-            #BtnBack:hover { background-color: #7f8c8d; }
-            QLabel#SectionHeader { color: #2c3e50; font-size: 16pt; font-weight: bold; margin-top: 15px; margin-bottom: 5px; }
-            QLabel#Tip { color: #e67e22; font-style: italic; font-size: 11pt; margin-bottom: 10px; }
+            QWidget { background-color: #ffffff; font-family: Georgia, serif; color: #333333; }
+            QLabel#Title { color: #0d47a1; font-family: Montserrat, "Berlin Sans", sans-serif; font-size: 24pt; font-weight: bold; padding: 15px 0; }
+            QLabel { color: #333333; font-size: 11pt; }
+            
+            /* Montos - Aplicando Rojo/Verde para Gastos/Ingresos */
+            QLineEdit { 
+                border: 1px solid #bdbdbd; border-radius: 5px; padding: 8px; font-size: 11pt; background-color: #ffffff; 
+                font-family: "Roboto Mono", monospace; /* Fuente Geométrica/Monoespacio para precisión */
+            }
+            QLineEdit:focus { border: 1px solid #1e88e5; }
+            
+            /* Botón de Acción Principal (Azul) */
+            QPushButton { 
+                background-color: #1e88e5; 
+                color: white; border: none; border-radius: 8px; padding: 15px; font-size: 16pt; font-family: Montserrat, sans-serif; font-weight: bold; margin-top: 20px; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); 
+            }
+            QPushButton:hover { background-color: #1565c0; }
+            
+            /* Encabezados y Tips */
+            QLabel#SectionHeader { color: #0d47a1; font-size: 16pt; font-weight: bold; margin-top: 15px; margin-bottom: 5px; }
+            QLabel#Tip { color: #ff9800; font-style: italic; font-size: 11pt; margin-bottom: 10px; }
         """)
 
         titulo = QLabel("Ingrese sus Datos Financieros")
@@ -294,14 +333,20 @@ class VistaIngresoDatos(QWidget):
         self.validator_gastos.setLocale(self.locale_mx)
         self.validator_gastos.setNotation(QDoubleValidator.StandardNotation)
         
+        # Ingresos (VERDE)
         frame_ingreso = self._create_input_frame("💰 Ingresos mensuales:", self.validator_ingreso, False)
         self.entry_ingreso = frame_ingreso.findChild(QLineEdit)
+        self.entry_ingreso.setStyleSheet("color: #43a047; font-weight: 600;") # Verde para Ingreso
         self.entry_ingreso.editingFinished.connect(lambda: self.format_money(self.entry_ingreso)) 
+        self.entry_ingreso.returnPressed.connect(self.handle_enter_key)
         main_layout.addWidget(frame_ingreso)
 
+        # Meta de Ahorro (VERDE)
         frame_ahorro = self._create_input_frame("📈 Meta de ahorro (opcional):", self.validator_gastos, True) 
         self.entry_ahorro = frame_ahorro.findChild(QLineEdit)
+        self.entry_ahorro.setStyleSheet("color: #43a047; font-weight: 600;") # Verde para Ahorro
         self.entry_ahorro.editingFinished.connect(lambda: self.format_money(self.entry_ahorro)) 
+        self.entry_ahorro.returnPressed.connect(self.handle_enter_key)
         main_layout.addWidget(frame_ahorro)
         
         h_layout_buttons = QHBoxLayout()
@@ -368,7 +413,10 @@ class VistaIngresoDatos(QWidget):
                 entry = QLineEdit()
                 entry.setPlaceholderText("0.00")
                 entry.setValidator(self.validator_gastos)
+                entry.setStyleSheet("color: #e53935;") # Rojo para Gastos
                 entry.editingFinished.connect(lambda entry=entry: self.format_money(entry)) 
+                entry.returnPressed.connect(self.handle_enter_key)
+                
                 self.fijos_layout.addWidget(label, row, 0)
                 self.fijos_layout.addWidget(entry, row, 1)
                 self.entrada_gastos[gasto] = entry
@@ -381,7 +429,7 @@ class VistaIngresoDatos(QWidget):
             header.setObjectName("SectionHeader")
             self.gastos_layout.addWidget(header)
             
-            tip = QLabel("Recomendación: Agrega lo ¡máximo! que estimes gastar en estos rubros.")
+            tip = QLabel("TIP: Agrega lo **máximo** que estimes gastar en estos rubros.")
             tip.setObjectName("Tip")
             self.gastos_layout.addWidget(tip)
 
@@ -390,7 +438,10 @@ class VistaIngresoDatos(QWidget):
                 entry = QLineEdit()
                 entry.setPlaceholderText("0.00")
                 entry.setValidator(self.validator_gastos)
+                entry.setStyleSheet("color: #e53935;") # Rojo para Gastos
                 entry.editingFinished.connect(lambda entry=entry: self.format_money(entry)) 
+                entry.returnPressed.connect(self.handle_enter_key)
+
                 self.variables_layout.addWidget(label, row, 0)
                 self.variables_layout.addWidget(entry, row, 1)
                 self.entrada_gastos[gasto] = entry
@@ -407,7 +458,7 @@ class VistaIngresoDatos(QWidget):
             
 
 # ----------------------------------------------------------------------
-# VISTA 1: SELECCIÓN 
+# VISTA 1: Selección (Ajustes de Fuente y Color)
 # ----------------------------------------------------------------------
 
 class VistaSeleccion(QWidget):
@@ -417,7 +468,6 @@ class VistaSeleccion(QWidget):
         self.checkbox_vars = {}
         self.setup_ui() 
     
-    # --- MÉTODOS PARA SELECCIONAR/DESELECCIONAR ---
     def seleccionar_todos(self):
         for cb in self.checkbox_vars.values():
             cb.setChecked(True)
@@ -425,34 +475,48 @@ class VistaSeleccion(QWidget):
     def deseleccionar_todos(self):
         for cb in self.checkbox_vars.values():
             cb.setChecked(False)
-    # ----------------------------------------------
 
     def setup_ui(self): 
         main_layout = QVBoxLayout(self)
-        
+      
         self.setStyleSheet("""
-            QWidget { background-color: #e0f7fa; font-family: 'Segoe UI', Arial, sans-serif; color: #212121; }
-            QLabel#Title { color: #00796b; font-size: 30pt; font-weight: bold; padding: 20px 0; }
+            QWidget { background-color: #e0f7fa; font-family: Georgia, serif; color: #212121; }
+            QLabel#Title { 
+                color: #0d47a1; /* Azul Marino */
+                font-family: Montserrat, "Berlin Sans", sans-serif; 
+                font-size: 30pt; 
+                font-weight: bold; 
+                padding: 20px 0; 
+            }
             QLabel { color: #424242; font-size: 12pt; }
+            
             QCheckBox { padding: 8px 0; font-size: 11pt; color: #333333; }
-            QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #00796b; border-radius: 4px; background-color: white; }
-            QCheckBox::indicator:checked { background-color: #00796b; }
-            QCheckBox:hover { color: #004d40; }
+            QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #0d47a1; border-radius: 4px; background-color: white; }
+            QCheckBox::indicator:checked { background-color: #0d47a1; } /* Azul Marino */
+            QCheckBox:hover { color: #0d47a1; }
+            
             /* Botón de Confirmación Principal */
-            QPushButton#BtnConfirm { background-color: #00796b; color: white; border: none; border-radius: 8px; padding: 18px; font-size: 18pt; font-weight: 600; margin-top: 25px; box-shadow: 3px 3px 8px rgba(0,0,0,0.25); }
-            QPushButton#BtnConfirm:hover { background-color: #004d40; }
-            QPushButton#BtnConfirm:pressed { background-color: #00382e; padding-top: 20px; padding-bottom: 16px; box-shadow: 1px 1px 3px rgba(0,0,0,0.15); }
+            QPushButton#BtnConfirm { 
+                background-color: #0d47a1; 
+                color: white; border: none; border-radius: 8px; padding: 18px; font-size: 18pt; 
+                font-family: Montserrat, sans-serif; 
+                font-weight: bold; 
+                margin-top: 25px; box-shadow: 3px 3px 8px rgba(0,0,0,0.25); 
+            }
+            QPushButton#BtnConfirm:hover { background-color: #1565c0; }
+            
             /* Botones Auxiliares */
             QPushButton#AuxButton {
-                background-color: #607d8b; /* Azul grisáceo */
-                color: white;
+                background-color: #90a4ae; /* Azul grisáceo */
+                color: #212121;
                 border: none;
                 border-radius: 4px;
                 padding: 8px 12px;
                 font-size: 10pt;
+                font-family: Georgia, serif;
             }
             QPushButton#AuxButton:hover {
-                background-color: #455a64;
+                background-color: #78909c;
             }
         """)
         
@@ -460,13 +524,17 @@ class VistaSeleccion(QWidget):
         titulo.setObjectName("Title") 
         titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(titulo)
+         
+        frase_bienvenida = QLabel("¡Bienvenido! Empecemos a organizar tus finanzas.")
+        frase_bienvenida.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        frase_bienvenida.setStyleSheet("font-size: 16pt; color: #4CAF50; margin-bottom: 20px; font-family: Georgia, serif;")
+        main_layout.addWidget(frase_bienvenida)
         
         subtitulo = QLabel("1. Seleccione los gastos que desea incluir en el análisis:")
         subtitulo.setStyleSheet("font-size: 14pt; margin-top: 15px; margin-bottom: 10px; color: #333333;")
         subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(subtitulo)
 
-        # --- CONTENEDOR DE BOTONES DE CONTROL ---
         control_layout = QHBoxLayout()
         
         btn_select_all = QPushButton("Seleccionar Todos")
@@ -481,7 +549,6 @@ class VistaSeleccion(QWidget):
         control_layout.addWidget(btn_deselect_all)
         control_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
         main_layout.addLayout(control_layout)
-        # ----------------------------------------
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -520,7 +587,7 @@ class VistaSeleccion(QWidget):
 
 
 # ----------------------------------------------------------------------
-# VENTANA PRINCIPAL (Contenedor de Pila) (sin cambios)
+# VENTANA Principal (Contenedor de Pila)
 # ----------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
@@ -564,7 +631,8 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication([])
     
-    app.setFont(QFont("Segoe UI", 10))
+    # Aplicar Georgia como fuente base si está disponible
+    app.setFont(QFont("Georgia", 10))
     
     main_window = MainWindow()
     main_window.show()
